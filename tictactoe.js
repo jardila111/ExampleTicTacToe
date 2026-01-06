@@ -1,103 +1,151 @@
-function assignSpace(space, owner) {
-  const image = document.createElement('img');
-  image.src = owner === 'x' ? X_IMAGE_URL : O_IMAGE_URL;
-  space.appendChild(image);
+const xImageURL = "https://img.freepik.com/premium-vector/twitter-new-x-logo-design-vector_1340851-70.jpg"
+const oImageURL = "https://1000logos.net/wp-content/uploads/2020/08/Opera-Logo-2013.jpg"
 
-  const index = parseInt(space.dataset.index);
-  takenBoxes[index] = owner;
-  const indexToRemove = freeBoxes.indexOf(space);
-  freeBoxes.splice(indexToRemove, 1);
-  space.removeEventListener('click', changeToX);
+const freeBoxes =[];
+const takenBoxes = []; // Empty dictionary for mapping of box id to owner
+
+function assignSpaces(item, owner) {
+    const img = document.createElement('img');
+    img.src = owner === 'X' ? xImageURL : oImageURL;
+    
+    let index = parseInt(item.id);
+    takenBoxes[index] = owner;
+
+    item.appendChild(img);
+    item.removeEventListener('click', onClick);
+
+    index = freeBoxes.indexOf(item);
+    freeBoxes.splice(index, 1);
 }
 
-function changeToX(event) {
-  assignSpace(event.currentTarget, 'x');
-
-  if (isGameOver()) {
-    displayWinner();
-  } else {
-    computerChooseO();
-  }
+function onClick(event) {
+    assignSpaces(event.currentTarget, 'X');
+    if (isGameOver()) {
+        displayWinner();
+    } else {
+        computerChooseO();
+    }
 }
 
 function computerChooseO() {
-  const allBoxes  = document.querySelectorAll('#grid div');
-  const index = Math.floor(Math.random() * freeBoxes.length);
-  const freeSpace = freeBoxes[index];
+    if (freeBoxes.length === 0) {
+        return; // no empty items, do nothing
+    }
 
-  assignSpace(freeSpace, 'o');
-
-  if (isGameOver()) {
-    displayWinner();
-  }
+    const randomIndex = computerChooseMove();
+    const chosenItem = freeBoxes[randomIndex];
+    assignSpaces(chosenItem, 'O');
+    if (isGameOver()) {
+        displayWinner();
+    }
+}
+const gridItems = document.querySelectorAll('#grid div');
+for (const item of gridItems) {
+    item.addEventListener('click', onClick);
+    freeBoxes.push(item);
 }
 
 function isGameOver() {
-  return freeBoxes.length === 0 || getWinner() !== null;
+    if (getWinner() === 'X' || getWinner() === 'O') {
+        return true;
+    }
+    if(freeBoxes.length === 0) {
+        return true;
+    }
+    return false;
 }
 
 function displayWinner() {
-  const winner = getWinner();
-
-  const resultContainer = document.querySelector('#results');
-  const header = document.createElement('h1');
-  if (winner === 'x') {
-    header.textContent = 'You win!';
-  } else if (winner === 'o') {
-    header.textContent = 'Computer wins';
-  } else {
-    header.textContent = 'Tie';
-  }
-  resultContainer.appendChild(header);
-
-  // Remove remaining event listeners
-  for (const box of freeBoxes) {
-    box.removeEventListener('click', changeToX);
-  }
-}
-
-function checkBoxes(one, two, three) {
-  if (takenBoxes[one] !== undefined &&
-      takenBoxes[one] === takenBoxes[two] &&
-      takenBoxes[two] === takenBoxes[three]) {
-    return takenBoxes[one];
-  }
-  return null;
-}
-
-// Returns 'x', 'o', or null for no winner yet.
-// for each row and each column checks see if all 3 boxes are of the same types (meaning all x or all o).
-function getWinner() 
-{
-  for (let col = 0; col < 3; col++) 
-  {
-    const offset = col * 3;
-    // Check rows and columns.
-    let result = checkBoxes(offset, 1 + offset, 2 + offset) ||
-        checkBoxes(col, 3 + col, 6 + col);
-    if (result) {
-      return result;
+    // Display winner message by using winner: if winner is 'X' or 'O', display 'X wins!' or 'O wins!'
+    // Otherwise display 'Tie!'
+    let winner = getWinner();
+    // if (winner === 'X') {
+    //     alert('You wins!');
+    // } else if (winner === 'O') {
+    //     alert('You lose!');
+    // } else {
+    //     alert('Tie!');
+    // }
+    const resultContainer = document.querySelector('#result');
+    const headingMessage = document.createElement('h1');
+    if (winner === 'X') {
+        headingMessage.textContent = 'You wins!';
+    } else if (winner === 'O') {
+        headingMessage.textContent = 'You lose!';
+    } else {
+        headingMessage.textContent = 'Tie!';
     }
-  }
+    resultContainer.appendChild(headingMessage);
 
-  // Check diagonals
-  return checkBoxes(0, 4, 8) || checkBoxes(2, 4, 6);
+    // remove all remainding event listeners
+    for (const item of gridItems) {
+        item.removeEventListener('click', onClick);
+    }
 }
 
-// ----
-// MAIN
-// ----
+function getWinner() {
+    let rowResult = checkBoxes("0", "1", "2") || checkBoxes("3", "4", "5") || checkBoxes("6", "7", "8");
+    if (rowResult !== null) {
+        return rowResult;
+    }
+    let colResult = checkBoxes("0", "3", "6") || checkBoxes("1", "4", "7") || checkBoxes("2", "5", "8");
+    if (colResult !== null) {
+        return colResult;
+    }
+    const diagResult = checkBoxes("0", "4", "8") || checkBoxes("2", "4", "6");
+    if (diagResult !== null) {
+        return diagResult;
+    }
+    return null;
+}
 
-const X_IMAGE_URL = './cross.png';
-const O_IMAGE_URL = './circle.png';
+function checkBoxes(first, second, third) {
+    if (takenBoxes[first] !== undefined &&
+        takenBoxes[second] === takenBoxes[first] &&
+        takenBoxes[second] === takenBoxes[third]
+    )
+        return takenBoxes[first];
+    return null;
+}
 
-const freeBoxes = [];
-// Map of box number -> 'x' or 'o'
-const takenBoxes = {};
+function computerChooseMove() {
+    // First see if O can win in the next move. If so, return the winning move
+    for (let i = 0; i < freeBoxes.length; i++) {
+        const cell = freeBoxes[i];
+        const index = parseInt(cell.id);
 
-const boxes = document.querySelectorAll('#grid div');
-for (const box of boxes) 
-{
-  box.addEventListener('click', changeToX);
-  freeBoxes.push(box);
+        // Temporarily mark this spot for O
+        const previousValue = takenBoxes[index];
+        takenBoxes[index] = 'O';
+
+        // Check if that makes O win
+        const winner = getWinner();
+
+        // Undo the change
+        takenBoxes[index] = previousValue;
+
+        if (winner === 'O') {
+            return i;  // index in freeBoxes
+        }
+    }
+
+    // Second, see if opponent can win in the next move. If so, make that move so the opponent doesn't win
+    for (let i = 0; i < freeBoxes.length; i++) {
+        const cell = freeBoxes[i];
+        const index = parseInt(cell.id);
+
+        const previousValue = takenBoxes[index];
+        takenBoxes[index] = 'X';
+
+        const winner = getWinner();
+
+        takenBoxes[index] = previousValue;
+
+        if (winner === 'X') {
+            return i;  // block this move
+        }
+    }
+
+    // If none of the above, just make a random move
+    return Math.floor(Math.random() * freeBoxes.length);
 }
